@@ -16,7 +16,7 @@ jobs:
           command: |
             apt-get update -y
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-                git openssh python3 python3-pip curl clang bison llvm llvm-dev lld ninja-build cmake \
+                git openssh-client python3 python3-pip curl clang bison llvm llvm-dev lld ninja-build cmake \
                 crossbuild-essential-arm64 ca-certificates zip unzip make yasm
             pip3 install requests
 
