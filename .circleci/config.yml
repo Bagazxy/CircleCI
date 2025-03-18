@@ -28,6 +28,12 @@ jobs:
             # Verify installation
             which repo && repo --version
 
+      - run:  # <== TAMBAHKAN STEP INI
+          name: Configure Git Identity
+          command: |
+            git config --global user.email "akumaumabar222@gmail.com"
+            git config --global user.name "NathanKanaeru"
+
       - run:
           name: Initialize Android LLVM Toolchain
           command: |
