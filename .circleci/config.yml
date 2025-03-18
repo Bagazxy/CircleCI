@@ -25,6 +25,10 @@ jobs:
           command: |
             mkdir -p ${LLVM_TOOLCHAIN_DIR}
             cd ${LLVM_TOOLCHAIN_DIR}
+            git clone https://android.googlesource.com/platform/manifest
+            cd manifest
+            git checkout llvm-toolchain
+            cd ..
             repo init -u https://android.googlesource.com/platform/manifest -b llvm-toolchain
             repo sync -c
 
