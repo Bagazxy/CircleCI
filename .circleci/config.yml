@@ -45,6 +45,7 @@ jobs:
       - run:
           name: Replace with Custom Code
           command: |
+            mkdir -p ${CUSTOM_NDK_REPO_DIR}
             cd ${LLVM_TOOLCHAIN_DIR}/toolchain/llvm_android
             mv patches ../patches_backup || true
             rm -rf *
