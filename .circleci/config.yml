@@ -21,6 +21,14 @@ jobs:
             pip3 install requests
 
       - run:
+          name: Install Repo Tool
+          command: |
+            curl -s https://storage.googleapis.com/git-repo-downloads/repo > /usr/local/bin/repo
+            chmod a+x /usr/local/bin/repo
+            # Verify installation
+            which repo && repo --version
+
+      - run:
           name: Initialize Android LLVM Toolchain
           command: |
             mkdir -p ${LLVM_TOOLCHAIN_DIR}
@@ -66,7 +74,7 @@ jobs:
           name: Test Build
           command: |
             cd ${NDK_DIR}
-            ./toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang --version
+            echo -e '#include <stdio.h>\nint main() { printf("Hello ARM64!\\n"); return 0; }' > test.c
             ./toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang test.c -o test_binary
             file test_binary
 
