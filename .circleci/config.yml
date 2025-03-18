@@ -1,0 +1,81 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: ubuntu:20.04
+    environment:
+      LLVM_TOOLCHAIN_DIR: /root/llvm-toolchain
+      CUSTOM_NDK_REPO_DIR: /root/project
+      NDK_VERSION: r14b
+    steps:
+      - checkout
+
+      - run:
+          name: Install Dependencies
+          command: |
+            apt-get update -y
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+                git python3 python3-pip curl clang bison llvm llvm-dev lld ninja-build cmake \
+                crossbuild-essential-arm64 ca-certificates zip unzip make yasm
+            pip3 install requests
+
+      - run:
+          name: Initialize Android LLVM Toolchain
+          command: |
+            mkdir -p ${LLVM_TOOLCHAIN_DIR}
+            cd ${LLVM_TOOLCHAIN_DIR}
+            repo init -u https://android.googlesource.com/platform/manifest -b llvm-toolchain
+            repo sync -c
+
+      - run:
+          name: Replace with Custom Code
+          command: |
+            cd ${LLVM_TOOLCHAIN_DIR}/toolchain/llvm_android
+            mv patches ../patches_backup || true
+            rm -rf *
+            cp -rf ${CUSTOM_NDK_REPO_DIR}/* .
+            mv ../patches_backup patches || true
+
+      - run:
+          name: Build Toolchain
+          command: |
+            cd ${LLVM_TOOLCHAIN_DIR}
+            python3 toolchain/llvm_android/build.py --no-build windows --skip-tests --single-stage --no-musl || true
+
+      - run:
+          name: Download NDK r14b
+          command: |
+            cd ${LLVM_TOOLCHAIN_DIR}
+            wget -q https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux-x86_64.zip
+            unzip -q android-ndk-${NDK_VERSION}-linux-x86_64.zip -d ndk
+            export NDK_DIR="${LLVM_TOOLCHAIN_DIR}/ndk/android-ndk-${NDK_VERSION}"
+
+      - run:
+          name: Copy Built Binaries to NDK
+          command: |
+            cd ${LLVM_TOOLCHAIN_DIR}
+            cp -fr out/stage2/bin/clang* ${NDK_DIR}/toolchains/llvm/prebuilt/linux-x86_64/bin/
+            cp -fr out/stage2/lib/llvm-* ${NDK_DIR}/toolchains/llvm/prebuilt/linux-x86_64/bin/
+            cp -fr out/stage2/lib/lld* ${NDK_DIR}/toolchains/llvm/prebuilt/linux-x86_64/bin/
+            cp -fr out/stage2/lib/clang ${NDK_DIR}/toolchains/llvm/prebuilt/linux-x86_64/lib/
+            cp -fr /usr/bin/make ${NDK_DIR}/prebuilt/linux-x86_64/bin/
+            cp -fr /usr/bin/yasm ${NDK_DIR}/prebuilt/linux-x86_64/bin/
+
+      - run:
+          name: Test Build
+          command: |
+            cd ${NDK_DIR}
+            ./toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang --version
+            ./toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang test.c -o test_binary
+            file test_binary
+
+      - run:
+          name: Package NDK
+          command: |
+            cd ${LLVM_TOOLCHAIN_DIR}/ndk
+            zip -qr android-ndk-${NDK_VERSION}-aarch64-linux.zip android-ndk-${NDK_VERSION}
+
+      - store_artifacts:
+          path: ${LLVM_TOOLCHAIN_DIR}/ndk/android-ndk-${NDK_VERSION}-aarch64-linux.zip
+          destination: android-ndk-${NDK_VERSION}-aarch64-linux.zip
